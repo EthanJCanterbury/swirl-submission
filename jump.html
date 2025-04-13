@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dino Jump</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #8FBC8F;
+            font-family: 'Press Start 2P', cursive;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 80%;
+            max-width: 600px;
+            text-align: center;
+            background-color: #FAEBD7;
+            border-radius: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            padding: 20px;
+            animation: fadeIn 1s ease;
+            box-sizing: border-box;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 0.5em;
+            color: #228B22;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        @media (max-width: 400px){
+           h1{
+             font-size: 1.75em
+           }
+        }
+
+        #game-canvas {
+          background-color: #E0FFFF;
+          border: 4px solid #2E8B57;
+          border-radius: 10px;
+          display: block;
+          margin: 0 auto;
+          max-width: 100%;
+          height: auto;
+          max-height: 300px;
+          aspect-ratio: 6 / 3;
+        }
+
+        #start-button {
+            padding: 0.75em 1.5em;
+            font-size: 1em;
+            color: #FFFFFF;
+            background-color: #34A739;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 1em;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            font-family: 'Press Start 2P', cursive;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        #start-button:hover {
+            background-color: #2A7F2E;
+            transform: scale(1.05);
+        }
+
+        #start-button:active {
+            background-color: #225725;
+            transform: scale(0.95);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        #game-over-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0,0,0,0.8);
+            color: white;
+            font-size: 1.5em;
+            z-index: 10;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        #game-over-overlay h2 {
+            font-size: 2.5em;
+            margin-bottom: 0.5em;
+             color: #FF4500;
+        }
+       @media (max-width: 400px){
+          #game-over-overlay h2{
+             font-size: 2em;
+           }
+        }
+
+        #game-over-overlay p {
+            margin-bottom: 1em;
+            font-size: 1.2em;
+        }
+
+        #restart-button {
+            padding: 0.75em 1.5em;
+            font-size: 1em;
+            color: #FFFFFF;
+            background-color: #FF6347;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            font-family: 'Press Start 2P', cursive;
+             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+             text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        #restart-button:hover {
+            background-color: #FF4500;
+            transform: scale(1.05);
+        }
+
+        #restart-button:active {
+            background-color: #C82E00;
+            transform: scale(0.95);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+       @media (max-width: 400px){
+          #restart-button, #start-button{
+             font-size: 0.8em;
+             padding: 0.5em 1em;
+          }
+           #game-over-overlay p{
+             font-size: 1em
+           }
+        }
+       .score {
+          position: absolute;
+          top: 10px;
+          left: 50%;
+          transform: translateX(-50%);
+          color: #228B22;
+          font-size: 1.2em;
+          z-index: 10;
+          padding: 0.5em;
+          border-radius: 5px;
+          background-color: #F0F8FF;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        @media (max-width: 400px){
+            .score{
+               font-size: 1em;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Dino Jump</h1>
+        <canvas id="game-canvas"></canvas>
+        <button id="start-button">Start Game</button>
+        <div id="game-over-overlay">
+            <h2>Game Over</h2>
+            <p>Oh no! The dino crashed.</p>
+            <button id="restart-button">Restart</button>
+        </div>
+         <div class="score">Score: <span id="score-display">0</span></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const startButton = document.getElementById('start-button');
+        const gameOverOverlay = document.getElementById('game-over-overlay');
+        const restartButton = document.getElementById('restart-button');
+        const scoreDisplay = document.getElementById('score-display');
+        const dinoColor = '#2E8B57';
+        const obstacleColor = '#FF6347';
+        const scoreColor = '#228B22';
+        const cloudColor = '#E0FFFF';
+
+        let gameRunning = false;
+        let dinoX;
+        let dinoY;
+        let dinoHeight = 50;
+        let dinoWidth = 50;
+        let dinoSpeed = 0;
+        let gravity = 0.8;
+        let obstacleX;
+        let obstacleY;
+        let obstacleWidth = 30;
+        let obstacleHeight = 50;
+        let obstacleSpeed = 5;
+        let isJumping = false;
+        let animationFrameId;
+        let score = 0;
+        let gameSpeed = 1;
+        let clouds = [];
+
+        function resizeCanvas() {
+            canvas.width = document.querySelector('.game-container').clientWidth;
+            canvas.height = canvas.width * 0.75;
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawDino() {
+            ctx.fillStyle = dinoColor;
+            ctx.fillRect(dinoX, dinoY, dinoWidth, dinoHeight);
+        }
+
+        function drawObstacle() {
+            ctx.fillStyle = obstacleColor;
+            ctx.fillRect(obstacleX, obstacleY, obstacleWidth, obstacleHeight);
+        }
+
+       function drawScore() {
+            scoreDisplay.textContent = score;
+        }
+
+        function drawCloud(cloud) {
+            ctx.fillStyle = cloudColor;
+            ctx.beginPath();
+            ctx.arc(cloud.x, cloud.y, cloud.radius, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function updateClouds() {
+            if (clouds.length < 5 && Math.random() < 0.03) {
+                clouds.push({
+                    x: canvas.width + Math.random() * 100,
+                    y: canvas.height / 4 * Math.random(),
+                    radius: 20 + Math.random() * 10,
+                    speed: 0.2 + Math.random() * 0.1,
+                });
+            }
+
+            for (let i = 0; i < clouds.length; i++) {
+                clouds[i].x -= clouds[i].speed;
+                drawCloud(clouds[i]);
+
+                if (clouds[i].x + clouds[i].radius < 0) {
+                    clouds.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+        function updateDino() {
+            console.log("updateDino: dinoY=", dinoY, "dinoSpeed=", dinoSpeed, "isJumping=", isJumping);
+            dinoY += dinoSpeed;
+            dinoSpeed += gravity;
+
+            if (dinoY >= canvas.height - dinoHeight) {
+                dinoY = canvas.height - dinoHeight;
+                dinoSpeed = 0;
+                isJumping = false;
+            }
+        }
+
+        function updateObstacle() {
+            obstacleX -= obstacleSpeed;
+            if (obstacleX < -obstacleWidth) {
+                obstacleX = canvas.width;
+                score += 10;
+                drawScore();
+                gameSpeed += 0.1;
+                obstacleSpeed = 5 * gameSpeed;
+            }
+        }
+
+         function checkCollision() {
+            if (
+                dinoX < obstacleX + obstacleWidth &&
+                dinoX + dinoWidth > obstacleX &&
+                dinoY < obstacleY + obstacleHeight &&
+                dinoY + dinoHeight > obstacleY
+            ) {
+                return true;
+            }
+            return false;
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            gameOverOverlay.style.display = 'none';
+            dinoX = 50;
+            dinoY = canvas.height - dinoHeight;
+            dinoSpeed = 0;
+            obstacleX = canvas.width;
+            obstacleY = canvas.height - obstacleHeight;
+            score = 0;
+            gameSpeed = 1;
+            obstacleSpeed = 5;
+            clouds = [];
+            drawScore();
+            cancelAnimationFrame(animationFrameId);
+            startButton.textContent = 'Start Game';
+            resizeCanvas();
+        }
+
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            updateClouds();
+            drawDino();
+            drawObstacle();
+            updateDino();
+            updateObstacle();
+            drawScore();
+
+            if (checkCollision()) {
+                gameRunning = false;
+                gameOverOverlay.style.display = 'flex';
+                cancelAnimationFrame(animationFrameId);
+            } else {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function startGame() {
+            if (!gameRunning) {
+                resizeCanvas();
+                dinoX = 50;
+                dinoY = canvas.height - dinoHeight;
+                obstacleX = canvas.width;
+                obstacleY = canvas.height - obstacleHeight;
+                gameRunning = true;
+                gameOverOverlay.style.display = 'none';
+                startButton.textContent = 'Restart Game';
+                score = 0;
+                gameSpeed = 1;
+                obstacleSpeed = 5;
+                clouds = [];
+                gameLoop();
+            }
+        }
+
+        document.addEventListener('keydown', (event) => {
+            console.log("Key pressed:", event.key);
+            if (event.key === 'Space' && !isJumping) {
+                console.log("Spacebar pressed, jumping");
+                isJumping = true;
+                dinoSpeed = -12;
+            }
+        });
+
+        document.addEventListener('touchstart', (event) => {
+            console.log("Touch detected");
+            if (event.touches.length && !isJumping) {
+                console.log("Touch on screen, jumping");
+                isJumping = true;
+                dinoSpeed = -12;
+            }
+            event.preventDefault();
+        }, { passive: false });
+
+
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+
+        resetGame();
+    </script>
+</body>
+</html>
